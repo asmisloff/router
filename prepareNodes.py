@@ -5,68 +5,28 @@ import heapq
 from typing import Dict, List, Set, Tuple
 import numpy as np
 
-
-@total_ordering
-class Node:
-    def __init__(self, x: float, li: int, breaking: bool = False) -> None:
-        self.x: int = round(round(x, 3) * 1000)  # до метра
-        self.lineIndex: int = li
-        self.breaking: bool = breaking
-
-    def unbiasedLineIndex(self):
-        return self.lineIndex % 10_000
-
-    def branchIndex(self):
-        return self.lineIndex // 10_000
-
-    def setAxisCoordinate(self, x_: float):  # для обратной совместимости
-        self.x = round(round(x_, 3) * 1000)
-
-    def getAxisCoordinate(self) -> float:
-        return round(self.x / 1000, 3)
-
-    def copyToLineIndex(self, lineIndex: int):
-        c = Node(0.0, self.lineIndex, self.breaking)
-        c.x = self.x
-        c.lineIndex = self.branchIndex() * 10_000 + lineIndex
-        return c
-
-    def __repr__(self) -> str:
-        return str(self.x)
-
-    def __eq__(self, __value: object) -> bool:
-        if not isinstance(__value, Node):
-            return False
-        return self.lineIndex == __value.lineIndex and self.x == __value.x
-
-    def __lt__(self, __value: object) -> bool:
-        if not isinstance(__value, Node):
-            raise TypeError()
-        return self.lineIndex * 1000 + self.x < __value.lineIndex * 1000 + __value.x
-
-    def __hash__(self) -> int:
-        return self.lineIndex * 1000 + self.x
+from context import AcNetwork, ISchemaNode
 
 
 class NetworkSection:
     def __init__(self) -> None:
-        self.nodes: List[Node] = []
+        self.nodes: List[ISchemaNode] = []
+        self.__idx = 0
 
-    @classmethod
-    def fromDict(cls, nodes: List[Node]) -> "NetworkSection":
-        s = NetworkSection()
-        s.nodes = nodes[:]
-        s.nodes.sort(key=lambda n: n.lineIndex)
-        return s
+    def size(self):
+        return len(self.nodes)
 
-    def copy(self, networkChainLinkLines: Set[int], duplicateBreakinNodes: bool) -> "NetworkSection":
-        c = NetworkSection()
-        for n in self.nodes:
-            if n.unbiasedLineIndex() in networkChainLinkLines:
-                c.nodes.append(n)
-                if duplicateBreakinNodes and n.breaking:
-                    c.nodes[-1] = n.copyToLineIndex(n.lineIndex)
-        return c
+    def get(self, idx: int) -> ISchemaNode:
+        return self.nodes[idx]
+
+    def __iter__(self):
+        self.__idx = 0
+        return self
+
+    def __next__(self) -> ISchemaNode:
+        if self.__idx < len(self.nodes):
+            return self.nodes[self.__idx]
+        raise StopIteration
 
     def __repr__(self) -> str:
         return str([n.x for n in self.nodes])
@@ -85,10 +45,12 @@ class BranchNetworkChain:
         self.__idx = 0
 
     @classmethod
-    def fromAcNetworkFullDto(cls, dto: List[Tuple[float, int]]) -> "BranchNetworkChain":
+    def fromAcNetwork(cls, networks: List[AcNetwork]) -> "BranchNetworkChain":
         xLeft = np.iinfo(np.int32).min
         chainLinks = []
-        for x, trackQty in dto:
+        for ntw in networks:
+            x = ntw.coordinate
+            trackQty = ntw.trackQty
             xRight = round(round(x, 3) * 1000)
             chainLinks.append(
                 BranchNetworkChainLink(
@@ -97,16 +59,25 @@ class BranchNetworkChain:
             xLeft = xRight
         return BranchNetworkChain(chainLinks)
 
-    def findChainLink(self, x: int) -> BranchNetworkChainLink | None:
+    def findChainLink(self, x: int) -> BranchNetworkChainLink:
         idx = self.__findIndex(x)
         if idx is None:
-            return None
+            raise Exception(f"Точка за границами КС -- {x}")
         return self.chainLinks[idx]
 
-    def getLines(self, x: int) -> Set[int] | None:
+    def getCurrent(self) -> BranchNetworkChainLink:
+        return self.chainLinks[self.__idx]
+
+    def first(self):
+        return self.chainLinks[0]
+
+    def last(self):
+        return self.chainLinks[-1]
+
+    def getLines(self, x: int) -> Set[int]:
         idx = self.__findIndex(x)
         if idx is None:
-            return None
+            raise Exception(f"Точка за границами КС -- {x}")
         cl = self.chainLinks[idx]
         if cl.xRight == x and idx != len(self.chainLinks) - 1:
             clr = self.chainLinks[idx + 1]
@@ -136,8 +107,8 @@ class BranchNetworkChain:
         return "_".join(str(cl.xRight) for cl in self.chainLinks)
 
 
-def arrangeNodesByBranchIndex(nodes: Set[Node]) -> Dict[int, Dict[int, List[Node]]]:
-    res: Dict[int, Dict[int, List[Node]]] = {}
+def arrangeNodesByBranchIndex(nodes: Set[ISchemaNode]) -> Dict[int, Dict[int, List[ISchemaNode]]]:
+    res: Dict[int, Dict[int, List[ISchemaNode]]] = {}
     for node in nodes:
         branchIndex = node.lineIndex // 10_000
         branch = res.get(branchIndex)
@@ -155,79 +126,103 @@ def arrangeNodesByBranchIndex(nodes: Set[Node]) -> Dict[int, Dict[int, List[Node
     return res
 
 
-def addNetworkChainNodes(nodes: Dict[int, Dict[int, List[Node]]], network: List[BranchNetworkChain]):
-    for branchIndex, ntw in enumerate(network):
-        branch = nodes[branchIndex]
-        h = branch[1]
-        mins = [min(h_).x for h_ in branch.values()]
-        maxes = [max(h_).x for h_ in branch.values()]
-        for cl in ntw.chainLinks:
-            if all([cl.xRight < x for x in mins]) or all(cl.xRight > x for x in maxes):
-                continue
-            n = Node(cl.xRight / 1000, 1)
-            if n not in h:
-                heapq.heappush(h, n)
+def copyIfBreaking(node: ISchemaNode) -> ISchemaNode:
+    if node.breaking:
+        cp = ISchemaNode(node.lineIndex, node.axisCoordinate(), False)
+        cp.duplicatedBreakingNode = True
+        return cp
+    return node
 
 
-def buildBranchPartitions(branchNodeQueues: Dict[int, List[Node]], branchNetwork: BranchNetworkChain):
+def buildBranchPartitions(branches: Dict[int, Dict[int, List[ISchemaNode]]], network: Dict[int, BranchNetworkChain], branchIndex: int):
+    branchNodeQueues = branches[branchIndex]
+    branchNetwork = network[branchIndex]
     partitions: List[Tuple[NetworkSection, NetworkSection]] = []
 
-    def appendPartition():
-        ntw = branchNetwork.findChainLink(out[0].nodes[0].x)
-        if ntw is None:
-            raise Exception("Узел вне границ ТС")
-        leftSection = out.popleft().copy(ntw.lines, True)
-        rightSection = out[0].copy(ntw.lines, False)
-        partitions.append((leftSection, rightSection))
+    leftBound = min((min(q) for q in branchNodeQueues.values())).x
+    rightBound = max((max(q) for q in branchNodeQueues.values())).x
+    if branchNetwork.last().xRight < rightBound:
+        rightBound = branchNetwork.last().xRight
 
-    allLineIndices: Set[int] = set()
-    for ntw in branchNetwork.chainLinks:
-        allLineIndices.update(ntw.lines)
-    tmp: Dict[int, Node | None] = {key: None for key in allLineIndices}
-    out: deque[NetworkSection] = deque()
-
-    while (True):
-        for key in tmp:
-            tmp[key] = None
-        leftMost: Node | None = None
-        for li, queue in branchNodeQueues.items():
-            if len(queue) > 0:
-                node = heapq.heappop(queue)
-                tmp[li] = node
-                if leftMost is None or node.x < leftMost.x:
-                    leftMost = node
-        if leftMost is None:
-            break
-        for key, node in tmp.items():
-            if node is None:
-                tmp[key] = leftMost.copyToLineIndex(key)
-            elif node.x > leftMost.x:
-                heapq.heappush(branchNodeQueues[key], node)
-                tmp[key] = leftMost.copyToLineIndex(key)
+    leftSection: Dict[int, ISchemaNode] = {}
+    for li in branchNetwork.findChainLink(leftBound).lines:
+        q = branchNodeQueues.get(li)
+        if q is None or len(q) == 0:
+            leftSection[li] = ISchemaNode.createInstance(
+                leftBound, branchIndex, li)
+        else:
+            n = heapq.heappop(q)
+            if n.x > leftBound:
+                heapq.heappush(q, n)
+                leftSection[li] = ISchemaNode.createInstance(
+                    leftBound, branchIndex, + li)
             else:
-                tmp[key] = node
-        if len(out) == 2:
-            appendPartition()
-        out.append(NetworkSection.fromDict(
-            [n for n in tmp.values() if n is not None]))
-    appendPartition()
+                leftSection[li] = n
+
+    while (leftBound < rightBound):
+        leftMost = rightBound
+        rightSection: Dict[int, ISchemaNode] = {}
+        cl = branchNetwork.findChainLink(leftBound)
+        defaultX = min(cl.xRight, rightBound)
+        ls = NetworkSection()
+        rs = NetworkSection()
+        for li in cl.lines:
+            q = branchNodeQueues.get(li)
+            node: ISchemaNode
+            if q is None or len(q) == 0:
+                node = ISchemaNode.createInstance(defaultX, branchIndex, + li)
+            else:
+                n = heapq.heappop(q)
+                while n.x < leftBound:
+                    n = heapq.heappop(q)
+                if n.x > defaultX:
+                    heapq.heappush(q, n)
+                    node = ISchemaNode.createInstance(
+                        defaultX, branchIndex, li)
+                else:
+                    node = n
+            rightSection[li] = node
+            if node.x < leftMost:
+                leftMost = node.x
+        for li in cl.lines:
+            node = rightSection[li]
+            if node.x > leftMost:
+                q = branchNodeQueues.get(li)
+                if q is None:
+                    node.x = leftMost
+                else:
+                    heapq.heappush(q, node)
+                    rightSection[li] = ISchemaNode.createInstance(
+                        leftMost, branchIndex, li)
+            rs.nodes.append(rightSection[li])
+            ls.nodes.append(
+                copyIfBreaking(
+                    leftSection.get(li) or
+                    ISchemaNode.createInstance(leftBound, branchIndex, li))
+            )
+        partitions.append((ls, rs))
+        leftSection = rightSection
+        leftBound = leftMost
+
     return partitions
 
 
 if __name__ == "__main__":
     rng = np.random.default_rng()
-    nodes: Set[Node] = set()
-    network: List[BranchNetworkChain] = []
+    nodes: Set[ISchemaNode] = set()
+    network: Dict[int, BranchNetworkChain] = {}
     for branchIndex in range(3):
         for i in range(1, 4):
-            nodes.update([Node(x, 10_000 * branchIndex + i)
+            nodes.update([ISchemaNode(10_000 * branchIndex + i, x)
                          for x in rng.random(i + 1) * 100])
-        network.append(BranchNetworkChain.fromAcNetworkFullDto([(x, 2) for x in rng.random(2) * 150]))
+        network[branchIndex] = BranchNetworkChain.fromAcNetwork(
+            [AcNetwork(x, 2) for x in rng.random(2) * 150]
+        )
 
-    print(f"network: {network}")
+    print(f"network: {network[0]}")
     nodeQueues = arrangeNodesByBranchIndex(nodes)
-    print(f"nodeQueues: {nodeQueues}")
-    addNetworkChainNodes(nodeQueues, network)
+    print(f"nodeQueues: {nodeQueues[0]}")
+    # addNetworkChainNodes(nodeQueues, network)
 
-    partitions = buildBranchPartitions(nodeQueues[0], network[0])
+    partitions = buildBranchPartitions(nodeQueues, network, 0)
     print(partitions)

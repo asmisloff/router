@@ -1,13 +1,11 @@
 import unittest
-from context import ISchemaNode, NetworkResistanceRangeAC
+from context import AcNetwork, ISchemaNode
 from graph import Graph
-from network import Network
 from router import Router
-from typing import Callable, Optional
 
 
 class RouterTest(unittest.TestCase):
-    def __init__(self, methodName: str = ...) -> None:
+    def __init__(self, methodName: str) -> None:
         super().__init__(methodName)
 
     def test(self):
@@ -22,36 +20,7 @@ class RouterTest(unittest.TestCase):
 
         graph = Graph(n1 + n2 + n3)
 
-        ntw = Network(
-            {
-                0: [
-                    NetworkResistanceRangeAC(
-                        xMax=10,
-                        rr={
-                            (1, 1): 1.1+1.1j,
-                            (2, 2): 2.1+2.1j,
-                            (3, 3): 3.1+3.1j
-                        }
-                    ),
-                    NetworkResistanceRangeAC(
-                        xMax=21,
-                        rr={
-                            (1, 1): 1.2+1.2j,
-                            (2, 2): 2.2+2.2j,
-                            (3, 3): 3.2+3.2j
-                        }
-                    ),
-                    NetworkResistanceRangeAC(
-                        xMax=24,
-                        rr={
-                            (1, 1): 1.3+1.3j,
-                            (2, 2): 2.3+2.3j,
-                            (3, 3): 3.3+3.3j
-                        }
-                    )
-                ]
-            }
-        )
+        ntw = {0: [AcNetwork(10, 3), AcNetwork(21, 2), AcNetwork(26, 3)]}
 
         r = Router(graph, ntw)
         r.wire()
