@@ -23,12 +23,19 @@ class RouterTest(unittest.TestCase):
         ntw = {0: [AcNetwork(10, 3), AcNetwork(21, 2), AcNetwork(24, 3)]}
 
         r = Router(graph, ntw)
-        r.buildPartitions()
+        # r.buildPartitions()
+        # for partitions in r.partitions.values():
+        #     for p in partitions:
+        #         p._Partition__capacity = 2  # type: ignore
         r.initPartitionCells()
+        # for partitions in r.partitions.values():
+        #     for p in partitions:
+        #         if p.firstCell is not None:
+        #             p.firstCell.pullRightSection((p.xRight + p.xLeft) // 2)
 
         print(r.partitions[0])
         print(sorted(graph.nodes()))
-        graph.plot(0.1)
+        graph.plot(showZeroNode=False, shift=0.1)
 
 
 def nodeProducer(tn: int):

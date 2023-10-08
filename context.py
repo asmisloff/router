@@ -12,20 +12,18 @@ class Side(Enum):
 
 
 class AcNetworkLattice:
-    def cond(
-        self,
-        lineIndex1: int,
-        side1: Side,
-        lineIndex2: int,
-        side2: Side,
-        length: float
-    ) -> complex:
+    def cond(self, lineIndex1: int, side1: Side, lineIndex2: int, side2: Side, length: float) -> complex:
         return 1 + 0j
 
 
 @total_ordering
 class ISchemaNode:
-    """ Похожий интерфейс используется в проекте """
+    """ 
+    Похожий интерфейс используется в проекте. Нужно изменить следующее.
+        - Все комплексные числа хранить в примитивных float-ов. Существующие интерфейсы поддержать через свойства.
+        - Координату хранить как целое 4-байтовое число со знаком. Единица измерения - м.
+        - equal и hashCode остаются как есть сейчас в проекте, отсюда не переносим.
+    """
 
     def __init__(self, lineIndex: int, axisCoordinate: float, breaking=False) -> None:
         self.breaking = breaking
@@ -36,7 +34,7 @@ class ISchemaNode:
     @classmethod
     def createInstance(cls, x: int, branchIndex: int, lineIndex: int) -> "ISchemaNode":
         return ISchemaNode(branchIndex * 10_000 + lineIndex, 1e-3 * x)
-    
+
     def branchIndex(self) -> int:
         return self.lineIndex // 10_000
 
@@ -58,7 +56,7 @@ class ISchemaNode:
             return False
         if self.relativeLineIndex() == 0:
             return __value.relativeLineIndex() == 0
-        return (self.lineIndex == __value.lineIndex) and (self.x == __value.x) and (self.breaking == __value.breaking) and (self.duplicatedBreakingNode == __value.duplicatedBreakingNode)
+        return id(self) == id(__value) #(self.lineIndex == __value.lineIndex) and (self.x == __value.x) and (self.breaking == __value.breaking) and (self.duplicatedBreakingNode == __value.duplicatedBreakingNode)
 
     def __lt__(self, __value: object) -> bool:
         if not isinstance(__value, ISchemaNode):
@@ -68,11 +66,11 @@ class ISchemaNode:
     def __hash__(self):
         if self.relativeLineIndex() == 0:
             return 0
-        return self.lineIndex * 100_000_000 + self.x * 10_000_000 + self.breaking
+        return id(self)
 
 
 class ISchemaEdge:
-    """ Похожий интерфейс используется в проекте """
+    """ Похожий интерфейс используется в проекте. Изменить способ хранения комплексных величин. """
 
     def __init__(self, resistance: complex = 1+0j) -> None:
         self.__source: ISchemaNode | None = None

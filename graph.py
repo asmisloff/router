@@ -27,7 +27,7 @@ class Graph:
         edge._ISchemaEdge__target = tgt  # type: ignore
         self.__edges.add(edge)
 
-    def plot(self, shift: float = 0.25) -> None:
+    def plot(self, showZeroNode: bool = False, shift: float = 0.25) -> None:
         """ Разместить узлы и ребра на графике """
         f, (ax1, ax2) = plt.subplots(2)
 
@@ -45,7 +45,7 @@ class Graph:
         yy = []
         cc = []
         for n in self.__nodes:
-            if n.relativeLineIndex() == 0:
+            if not showZeroNode and n.relativeLineIndex() == 0:
                 continue
             x = n.axisCoordinate() if not n.duplicatedBreakingNode else n.axisCoordinate() + shift
             xx.append(x)
@@ -59,7 +59,7 @@ class Graph:
 
         edges = []
         for e in self.__edges:
-            if e.getTargetNode().relativeLineIndex() == 0:
+            if not showZeroNode and e.getTargetNode().relativeLineIndex() == 0:
                 continue
             n1 = e.getSourceNode()
             x1 = n1.axisCoordinate() if not n1.duplicatedBreakingNode else n1.axisCoordinate() + shift

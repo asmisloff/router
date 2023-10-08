@@ -15,6 +15,12 @@ class NetworkSection:
 
     def get(self, idx: int) -> ISchemaNode:
         return self.nodes[idx]
+    
+    def deepCopy(self) -> "NetworkSection":
+        cp = NetworkSection()
+        for n in self.nodes:
+            cp.nodes.append(ISchemaNode.createInstance(n.x, n.branchIndex(), n.relativeLineIndex()))
+        return cp
 
     def __iter__(self):
         self.__idx = -1

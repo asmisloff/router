@@ -15,7 +15,9 @@ class Cell:
             xRight: int,
             leftSection: NetworkSection,
             rightSection: NetworkSection,
-            lattice: AcNetworkLattice
+            lattice: AcNetworkLattice,
+            graph: Graph,
+            zeroNode: ISchemaNode
     ):
         self.next: "Cell" | None = None
         self.prev: "Cell" | None = None
@@ -25,11 +27,10 @@ class Cell:
         self.rightSection = rightSection
         self.lattice = lattice
         self.edges: Set[ISchemaEdge] = set()
+        self.__mergeInto(graph, zeroNode)
     
-    def mergeInto(self, graph: Graph, zeroNode: ISchemaNode | None):
-        if zeroNode is None:
-            zeroNode = ISchemaNode.createInstance(0, 0, 0)
-        # Рассмотреть все сочетания узлов из n по 2 и для каждой пары создать ребро и добавить его в общий граф.
+    def __mergeInto(self, graph: Graph, zeroNode: ISchemaNode):
+        # Рассмотреть все сочетания узлов из n по 2, для каждой пары создать ребро и добавить его в граф схемы.
         graph.addNode(zeroNode)
         for n in self.leftSection.nodes + self.rightSection.nodes:
             graph.addNode(n)

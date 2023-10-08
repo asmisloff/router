@@ -7,6 +7,8 @@ from network import NetworkSection
 
 
 class Partition:
+    """ Раздел ТС. """
+
     def __init__(
             self,
             xLeft: int,
@@ -25,40 +27,36 @@ class Partition:
         self.firstCell = None
         self.lastCell = None
         self.__payloads: List[ISchemaPayload] = []
-        self.__cellQty = 1
+        self.__capacity = 1
         self.lattice = lattice
         self.graph = graph
 
-    def ensureCapacity(self, payloadCoordinates: List[int]):
+    def updateCapacity(self, payloadCoordinates: List[int]):
+        """ Обновить значение емкости раздела. """
         coordinates: Set[int] = set()
         for x in payloadCoordinates:
             if x > self.xLeft and x < self.xRight:
                 coordinates.add(x)
-        if len(coordinates) > self.__cellQty:
-            self.__cellQty = len(coordinates) + 1
+        if len(coordinates) > self.__capacity:
+            self.__capacity = len(coordinates) + 1
 
     def initCells(self) -> None:
-        rightSection = NetworkSection()
-        rightSection.nodes = [
-            ISchemaNode.createInstance(self.xRight, n.branchIndex(), n.relativeLineIndex()) for n in self.rightSection
-        ]
-        self.firstCell = Cell(self.xLeft, self.xRight, self.leftSection, rightSection, self.lattice)
+        """ Создать ячейки. Количество равно текущему значению емкости. """
+        makeCell = lambda xl, xr, ls, rs: Cell(xl, xr, ls, rs, self.lattice, self.graph, self.zeroNode)
+
+        if self.__capacity == 1:
+            self.firstCell = makeCell(self.xLeft, self.xRight, self.leftSection, self.rightSection)
+            self.lastCell = self.firstCell
+            return
+
+        self.firstCell = makeCell(self.xLeft, self.xRight, self.leftSection, self.rightSection.deepCopy())
         prev = self.firstCell
-        for _ in range(1, self.__cellQty):
-            rightSection = NetworkSection()
-            rightSection.nodes = [
-                ISchemaNode.createInstance(self.xRight, n.branchIndex(), n.relativeLineIndex()) for n in self.rightSection
-            ]
-            next = Cell(self.xRight, self.xRight, prev.rightSection, rightSection, self.lattice)
+        for _ in range(self.__capacity - 1):
+            next = makeCell(self.xRight, self.xRight, prev.rightSection, self.rightSection.deepCopy())
             next.prev = prev
             prev.next = next
             prev = next
-        self.lastCell = prev
-        self.lastCell.rightSection = self.rightSection
-        cell = self.firstCell
-        while cell is not None:
-            cell.mergeInto(self.graph, self.zeroNode)
-            cell = cell.next
+        self.lastCell = makeCell(self.xRight, self.xRight, prev.rightSection, self.rightSection)
 
     def addPayload(self, pl: ISchemaPayload) -> bool:
         if self.firstCell is None or self.lastCell is None:
@@ -99,6 +97,6 @@ class Partition:
             return self.__addPayloadToCell(cell.next, pl)
         else:
             raise Exception()
-    
+
     def __repr__(self) -> str:
         return f"{{ left: {self.leftSection}, right: {self.rightSection} }}"
