@@ -38,22 +38,27 @@ class Partition:
             self.__cellQty = len(coordinates) + 1
 
     def initCells(self) -> None:
-        self.firstCell = Cell(
-            self.xLeft, self.xRight, self.leftSection, self.rightSection, self.zeroNode, self.lattice, self.graph
-        )
+        rightSection = NetworkSection()
+        rightSection.nodes = [
+            ISchemaNode.createInstance(self.xRight, n.branchIndex(), n.relativeLineIndex()) for n in self.rightSection
+        ]
+        self.firstCell = Cell(self.xLeft, self.xRight, self.leftSection, rightSection, self.lattice)
         prev = self.firstCell
-        for i in range(1, self.__cellQty):
+        for _ in range(1, self.__cellQty):
             rightSection = NetworkSection()
             rightSection.nodes = [
-                ISchemaNode.createInstance(self.xRight, n.branchIndex(), n.biasedLineIndex()) for n in self.rightSection
+                ISchemaNode.createInstance(self.xRight, n.branchIndex(), n.relativeLineIndex()) for n in self.rightSection
             ]
-            next = Cell(
-                self.xRight, self.xRight, prev.rightSection, rightSection, self.zeroNode, self.lattice, self.graph
-            )
+            next = Cell(self.xRight, self.xRight, prev.rightSection, rightSection, self.lattice)
             next.prev = prev
             prev.next = next
             prev = next
         self.lastCell = prev
+        self.lastCell.rightSection = self.rightSection
+        cell = self.firstCell
+        while cell is not None:
+            cell.mergeInto(self.graph, self.zeroNode)
+            cell = cell.next
 
     def addPayload(self, pl: ISchemaPayload) -> bool:
         if self.firstCell is None or self.lastCell is None:

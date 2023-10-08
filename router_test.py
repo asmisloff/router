@@ -23,13 +23,16 @@ class RouterTest(unittest.TestCase):
         ntw = {0: [AcNetwork(10, 3), AcNetwork(21, 2), AcNetwork(24, 3)]}
 
         r = Router(graph, ntw)
-        r.wire()
+        r.buildPartitions()
+        r.initPartitionCells()
 
+        print(r.partitions[0])
+        print(sorted(graph.nodes()))
         graph.plot(0.1)
 
 
 def nodeProducer(tn: int):
-    def _f(x: int, breaking=False):
+    def _f(x: float, breaking=False):
         return ISchemaNode(tn, x, breaking)
     return _f
 

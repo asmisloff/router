@@ -15,9 +15,7 @@ class Cell:
             xRight: int,
             leftSection: NetworkSection,
             rightSection: NetworkSection,
-            zeroNode: ISchemaNode,
-            lattice: AcNetworkLattice,
-            graph: Graph
+            lattice: AcNetworkLattice
     ):
         self.next: "Cell" | None = None
         self.prev: "Cell" | None = None
@@ -27,7 +25,10 @@ class Cell:
         self.rightSection = rightSection
         self.lattice = lattice
         self.edges: Set[ISchemaEdge] = set()
-        
+    
+    def mergeInto(self, graph: Graph, zeroNode: ISchemaNode | None):
+        if zeroNode is None:
+            zeroNode = ISchemaNode.createInstance(0, 0, 0)
         # Рассмотреть все сочетания узлов из n по 2 и для каждой пары создать ребро и добавить его в общий граф.
         graph.addNode(zeroNode)
         for n in self.leftSection.nodes + self.rightSection.nodes:
@@ -46,18 +47,17 @@ class Cell:
             else:
                 n1 = self.rightSection.get(i - self.leftSection.size())
                 side1 = Side.Right
-            li1 = n1.lineIndex % 10_000
+            li1 = n1.relativeLineIndex()
             if j < self.leftSection.size():
                 n2 = self.leftSection.get(j)
                 side2 = Side.Left
             else:
                 n2 = self.rightSection.get(j - self.leftSection.size())
                 side2 = Side.Right
-            li2 = n2.lineIndex % 10_000
-            e = ISchemaEdge.createWithCond(lattice.cond(li1, side1, li2, side2, self.xRight - self.xLeft))
+            li2 = n2.relativeLineIndex()
+            e = ISchemaEdge.createWithCond(self.lattice.cond(li1, side1, li2, side2, self.xRight - self.xLeft))
             graph.addEdge(n1, n2 if n2 != n1 else zeroNode, e)
             self.edges.add(e)
-
 
     def pullRightSection(self, destPoint: int) -> None:
         """ Притянуть ячейку за правое сечение в заданную точку. """

@@ -8,7 +8,7 @@ from context import AcNetwork, AcNetworkLattice, ISchemaNode
 class NetworkSection:
     def __init__(self) -> None:
         self.nodes: List[ISchemaNode] = []
-        self.__idx = 0
+        self.__idx = -1
 
     def size(self):
         return len(self.nodes)
@@ -17,16 +17,17 @@ class NetworkSection:
         return self.nodes[idx]
 
     def __iter__(self):
-        self.__idx = 0
+        self.__idx = -1
         return self
 
     def __next__(self) -> ISchemaNode:
+        self.__idx += 1
         if self.__idx < len(self.nodes):
             return self.nodes[self.__idx]
         raise StopIteration
 
     def __repr__(self) -> str:
-        return str([n.x for n in self.nodes])
+        return str([n for n in self.nodes])
 
 
 @dataclass

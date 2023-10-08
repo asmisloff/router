@@ -20,7 +20,7 @@ class AcNetworkLattice:
         side2: Side,
         length: float
     ) -> complex:
-        return 0 + 0j
+        return 1 + 0j
 
 
 @total_ordering
@@ -40,7 +40,7 @@ class ISchemaNode:
     def branchIndex(self) -> int:
         return self.lineIndex // 10_000
 
-    def biasedLineIndex(self) -> int:
+    def relativeLineIndex(self) -> int:
         return self.lineIndex % 10_000
 
     def axisCoordinate(self) -> float:
@@ -56,19 +56,19 @@ class ISchemaNode:
     def __eq__(self, __value: object) -> bool:
         if not isinstance(__value, ISchemaNode):
             return False
-        if self.lineIndex % 10_000 == 0:
-            return __value.lineIndex % 10_000 == 0
-        return self.lineIndex == __value.lineIndex and self.x == __value.x
+        if self.relativeLineIndex() == 0:
+            return __value.relativeLineIndex() == 0
+        return (self.lineIndex == __value.lineIndex) and (self.x == __value.x) and (self.breaking == __value.breaking) and (self.duplicatedBreakingNode == __value.duplicatedBreakingNode)
 
     def __lt__(self, __value: object) -> bool:
         if not isinstance(__value, ISchemaNode):
             raise TypeError()
-        return self.lineIndex * 1000 + self.x < __value.lineIndex * 1000 + __value.x
+        return self.x < __value.x
 
     def __hash__(self):
-        b = 1 if self.breaking else 0
-        d = 1 if self.duplicatedBreakingNode else 0
-        return int(100_000_000 * d + 10_000_000 * b + 1_000_000 * self.lineIndex + self.axisCoordinate())
+        if self.relativeLineIndex() == 0:
+            return 0
+        return self.lineIndex * 100_000_000 + self.x * 10_000_000 + self.breaking
 
 
 class ISchemaEdge:
