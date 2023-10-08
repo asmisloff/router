@@ -30,7 +30,7 @@ class Cell:
         self.__mergeInto(graph, zeroNode)
     
     def __mergeInto(self, graph: Graph, zeroNode: ISchemaNode):
-        # Рассмотреть все сочетания узлов из n по 2, для каждой пары создать ребро и добавить его в граф схемы.
+        # Пройти по всем сочетаниям узлов из n по 2, для каждой пары создать ребро и добавить его в граф схемы.
         graph.addNode(zeroNode)
         for n in self.leftSection.nodes + self.rightSection.nodes:
             graph.addNode(n)

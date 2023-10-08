@@ -41,7 +41,7 @@ class Partition:
             self.__capacity = len(coordinates) + 1
 
     def initCells(self) -> None:
-        """ Создать ячейки. Количество равно текущему значению емкости. """
+        """ Создать ячейки в количестве, равном текущему значению емкости. """
         makeCell = lambda xl, xr, ls, rs: Cell(xl, xr, ls, rs, self.lattice, self.graph, self.zeroNode)
 
         if self.__capacity == 1:
@@ -61,7 +61,7 @@ class Partition:
     def addPayload(self, pl: ISchemaPayload) -> bool:
         if self.firstCell is None or self.lastCell is None:
             raise Exception()
-        if pl.x > self.xLeft and pl.x < self.xRight:
+        if pl.x >= self.xLeft and pl.x <= self.xRight:
             self.__payloads.append(pl)
             return True
         return False
