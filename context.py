@@ -23,17 +23,6 @@ class AcNetworkLattice:
         return 0 + 0j
 
 
-class NetworkResistanceRangeAC:
-    """ 
-        Такой класс в проекте уже объявлен и используется, конвертация
-        из List<AcNetwork> в List<NetworkResistanceRangeAC> также есть.
-    """
-
-    def __init__(self, xMax: float, rr: MutualResistivities) -> None:
-        self.xMax = xMax
-        self.rr = rr
-
-
 @total_ordering
 class ISchemaNode:
     """ Похожий интерфейс используется в проекте """
@@ -47,6 +36,12 @@ class ISchemaNode:
     @classmethod
     def createInstance(cls, x: int, branchIndex: int, lineIndex: int) -> "ISchemaNode":
         return ISchemaNode(branchIndex * 10_000 + lineIndex, 1e-3 * x)
+    
+    def branchIndex(self) -> int:
+        return self.lineIndex // 10_000
+
+    def biasedLineIndex(self) -> int:
+        return self.lineIndex % 10_000
 
     def axisCoordinate(self) -> float:
         return round(self.x / 1000, 3)
@@ -105,7 +100,7 @@ class ISchemaEdge:
         return f"{self.__source} -> {self.__target}"
 
 
-class Payload:
+class ISchemaPayload:
     def __init__(self, x: float) -> None:
         self.x: int = round(x * 1000)
         self.trackNumber: int = 1
@@ -117,5 +112,8 @@ class Payload:
 
 class AcNetwork:
     def __init__(self, coordinate: float, trackQty: int = 2) -> None:
-        self.coordinate = coordinate
+        self.coordinate = round(coordinate, 3)
         self.trackQty = trackQty
+
+    def __repr__(self) -> str:
+        return f"{{ xRight: {self.coordinate}, trackQty: {self.trackQty}}}"

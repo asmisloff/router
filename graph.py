@@ -1,4 +1,4 @@
-from typing import List, Set
+from typing import Iterable, List, Set
 from matplotlib import pyplot as plt
 from context import ISchemaEdge, ISchemaNode
 
@@ -6,7 +6,7 @@ from context import ISchemaEdge, ISchemaNode
 class Graph:
     """ Имитирует граф схемы """
 
-    def __init__(self, nodes: List[ISchemaNode]) -> None:
+    def __init__(self, nodes: Iterable[ISchemaNode]) -> None:
         self.__nodes: Set[ISchemaNode] = set()
         self.__edges: Set[ISchemaEdge] = set()
         self.__nodesBeforeWiring: Set[ISchemaNode] = set()

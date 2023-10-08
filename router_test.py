@@ -20,7 +20,7 @@ class RouterTest(unittest.TestCase):
 
         graph = Graph(n1 + n2 + n3)
 
-        ntw = {0: [AcNetwork(10, 3), AcNetwork(21, 2), AcNetwork(26, 3)]}
+        ntw = {0: [AcNetwork(10, 3), AcNetwork(21, 2), AcNetwork(24, 3)]}
 
         r = Router(graph, ntw)
         r.wire()

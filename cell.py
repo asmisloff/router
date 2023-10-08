@@ -1,9 +1,9 @@
 from itertools import combinations_with_replacement
 from typing import List, Set
 
-from context import AcNetworkLattice, ISchemaEdge, ISchemaNode, Payload, Side
+from context import AcNetworkLattice, ISchemaEdge, ISchemaNode, ISchemaPayload, Side
 from graph import Graph
-from prepareNodes import NetworkSection
+from network import NetworkSection
     
 
 class Cell:
@@ -16,7 +16,6 @@ class Cell:
             leftSection: NetworkSection,
             rightSection: NetworkSection,
             zeroNode: ISchemaNode,
-            label: str,
             lattice: AcNetworkLattice,
             graph: Graph
     ):
@@ -26,7 +25,6 @@ class Cell:
         self.xRight: int = xRight
         self.leftSection = leftSection
         self.rightSection = rightSection
-        self.label: str = label
         self.lattice = lattice
         self.edges: Set[ISchemaEdge] = set()
         
@@ -95,7 +93,7 @@ class Cell:
             if self.prev is not None:
                 self.prev.pullRightSection(destPoint)
     
-    def findNodeToConnect(self, pl: Payload) -> ISchemaNode:
+    def findNodeToConnect(self, pl: ISchemaPayload) -> ISchemaNode:
         for lst in self.leftSection, self.rightSection:
             for n in lst:
                 if n.x == pl.x and pl.trackNumber == n.lineIndex:
@@ -116,4 +114,4 @@ class Cell:
             e.c = self.lattice.cond(n1.lineIndex, side1, n2.lineIndex, side2, length)
 
     def __repr__(self) -> str:
-        return f"{{label: {self.label}: left: {{x: {self.xLeft}, nodes: {self.leftSection}}}, right: {{x: {self.xRight}, nodes: {self.rightSection}}}}}"
+        return f"{{left: {{x: {self.xLeft}, section: {self.leftSection}}}, right: {{x: {self.xRight}, section: {self.rightSection}}}}}"
