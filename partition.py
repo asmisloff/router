@@ -1,7 +1,7 @@
 from typing import List, Set, Tuple
 from cell import Cell
 
-from context import AcNetworkLattice, ISchemaNode, ISchemaPayload
+from context import AcNetworkLattice, ICircuitNode, ISchemaPayload
 from graph import Graph
 from network import NetworkSection
 
@@ -15,7 +15,7 @@ class Partition:
             xRight: int,
             leftSection: NetworkSection,
             rightSection: NetworkSection,
-            zeroNode: ISchemaNode,
+            zeroNode: ICircuitNode,
             lattice: AcNetworkLattice,
             graph: Graph
     ) -> None:
@@ -23,13 +23,13 @@ class Partition:
         self.xRight = xRight
         self.leftSection = leftSection
         self.rightSection = rightSection
-        self.zeroNode: ISchemaNode = zeroNode
+        self.zeroNode: ICircuitNode = zeroNode
         self.firstCell = None
         self.lastCell = None
-        self.__payloads: List[ISchemaPayload] = []
         self.__capacity = 1
         self.lattice = lattice
         self.graph = graph
+        self.__payloads: List[ISchemaPayload] = []
 
     def updateCapacity(self, payloadCoordinates: List[int]):
         """ Обновить значение емкости раздела. """
@@ -87,12 +87,12 @@ class Partition:
     def removePayloads(self):
         self.__payloads.clear()
 
-    def __addPayloadToCell(self, cell: Cell, pl: ISchemaPayload) -> Tuple[Cell, ISchemaNode]:
+    def __addPayloadToCell(self, cell: Cell, pl: ISchemaPayload) -> Tuple[Cell, ICircuitNode]:
         if cell.xLeft == pl.x or cell.xRight == pl.x:
-            return cell, cell.findNodeToConnect(pl)
+            return cell, cell.getConnectingNode(pl)
         elif pl.x < cell.xRight:
             cell.pullRightSection(pl.x)
-            return cell, cell.findNodeToConnect(pl)
+            return cell, cell.getConnectingNode(pl)
         elif pl.x > cell.xRight and cell.next is not None:
             return self.__addPayloadToCell(cell.next, pl)
         else:

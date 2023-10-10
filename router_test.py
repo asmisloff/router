@@ -1,5 +1,5 @@
 import unittest
-from context import AcNetwork, ISchemaNode
+from context import AcNetworkDto, ICircuitNode
 from graph import Graph
 from router import Router
 
@@ -20,14 +20,14 @@ class RouterTest(unittest.TestCase):
 
         graph = Graph(n1 + n2 + n3)
 
-        ntw = {0: [AcNetwork(10, 3), AcNetwork(21, 2), AcNetwork(24, 3)]}
+        ntw = {0: [AcNetworkDto(10, 3), AcNetworkDto(21, 2), AcNetworkDto(24, 3)]}
 
         r = Router(graph, ntw)
-        # r.buildPartitions()
+        r.buildPartitions()
         # for partitions in r.partitions.values():
         #     for p in partitions:
         #         p._Partition__capacity = 2  # type: ignore
-        r.initPartitionCells()
+        r.initCells()
         # for partitions in r.partitions.values():
         #     for p in partitions:
         #         if p.firstCell is not None:
@@ -40,7 +40,7 @@ class RouterTest(unittest.TestCase):
 
 def nodeProducer(tn: int):
     def _f(x: float, breaking=False):
-        return ISchemaNode(tn, x, breaking)
+        return ICircuitNode(tn, x, breaking)
     return _f
 
 

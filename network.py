@@ -2,31 +2,31 @@ from dataclasses import dataclass
 from typing import Dict, List, Set
 import numpy as np
 
-from context import AcNetwork, AcNetworkLattice, ISchemaNode
+from context import AcNetworkDto, AcNetworkLattice, ICircuitNode
 
 
 class NetworkSection:
-    def __init__(self) -> None:
-        self.nodes: List[ISchemaNode] = []
+    def __init__(self, nodes: List[ICircuitNode]) -> None:
+        self.nodes: List[ICircuitNode] = nodes
         self.__idx = -1
 
     def size(self):
         return len(self.nodes)
 
-    def get(self, idx: int) -> ISchemaNode:
+    def get(self, idx: int) -> ICircuitNode:
         return self.nodes[idx]
     
     def deepCopy(self) -> "NetworkSection":
-        cp = NetworkSection()
+        cp = NetworkSection([])
         for n in self.nodes:
-            cp.nodes.append(ISchemaNode.createInstance(n.x, n.branchIndex(), n.relativeLineIndex()))
+            cp.nodes.append(ICircuitNode.createInstance(n.x, n.branchIndex(), n.relativeLineIndex()))
         return cp
 
     def __iter__(self):
         self.__idx = -1
         return self
 
-    def __next__(self) -> ISchemaNode:
+    def __next__(self) -> ICircuitNode:
         self.__idx += 1
         if self.__idx < len(self.nodes):
             return self.nodes[self.__idx]
@@ -50,7 +50,7 @@ class BranchNetworkChain:
         self.__idx = 0
 
     @classmethod
-    def fromAcNetwork(cls, networks: List[AcNetwork]) -> "BranchNetworkChain":
+    def fromAcNetworkDto(cls, networks: List[AcNetworkDto]) -> "BranchNetworkChain":
         xLeft = np.iinfo(np.int32).min
         chainLinks = []
         for ntw in networks:
@@ -70,24 +70,8 @@ class BranchNetworkChain:
             raise Exception(f"Точка за границами КС -- {x}")
         return self.chainLinks[idx]
 
-    def getCurrent(self) -> BranchNetworkChainLink:
-        return self.chainLinks[self.__idx]
-
-    def first(self):
-        return self.chainLinks[0]
-
     def last(self):
         return self.chainLinks[-1]
-
-    def getLines(self, x: int) -> Set[int]:
-        idx = self.__findIndex(x)
-        if idx is None:
-            raise Exception(f"Точка за границами КС -- {x}")
-        cl = self.chainLinks[idx]
-        if cl.xRight == x and idx != len(self.chainLinks) - 1:
-            clr = self.chainLinks[idx + 1]
-            return cl.lines.union(clr.lines)
-        return cl.lines
 
     def __findIndex(self, x: int) -> int | None:
         cl = self.chainLinks[self.__idx]

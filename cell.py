@@ -1,7 +1,7 @@
 from itertools import combinations_with_replacement
 from typing import List, Set
 
-from context import AcNetworkLattice, ISchemaEdge, ISchemaNode, ISchemaPayload, Side
+from context import AcNetworkLattice, ICircuitEdge, ICircuitNode, ISchemaPayload, Side
 from graph import Graph
 from network import NetworkSection
     
@@ -17,7 +17,7 @@ class Cell:
             rightSection: NetworkSection,
             lattice: AcNetworkLattice,
             graph: Graph,
-            zeroNode: ISchemaNode
+            zeroNode: ICircuitNode
     ):
         self.next: "Cell" | None = None
         self.prev: "Cell" | None = None
@@ -26,18 +26,18 @@ class Cell:
         self.leftSection = leftSection
         self.rightSection = rightSection
         self.lattice = lattice
-        self.edges: Set[ISchemaEdge] = set()
+        self.edges: Set[ICircuitEdge] = set()
         self.__mergeInto(graph, zeroNode)
     
-    def __mergeInto(self, graph: Graph, zeroNode: ISchemaNode):
+    def __mergeInto(self, graph: Graph, zeroNode: ICircuitNode):
         # Пройти по всем сочетаниям узлов из n по 2, для каждой пары создать ребро и добавить его в граф схемы.
         graph.addNode(zeroNode)
         for n in self.leftSection.nodes + self.rightSection.nodes:
             graph.addNode(n)
         for i, j in combinations_with_replacement(range(self.leftSection.size() + self.rightSection.size()), 2):
             # Это не тестировалось, может работать неправильно.
-            n1: ISchemaNode
-            n2: ISchemaNode
+            n1: ICircuitNode
+            n2: ICircuitNode
             side1: Side
             side2: Side
             li1: int
@@ -56,7 +56,7 @@ class Cell:
                 n2 = self.rightSection.get(j - self.leftSection.size())
                 side2 = Side.Right
             li2 = n2.relativeLineIndex()
-            e = ISchemaEdge.createWithCond(self.lattice.cond(li1, side1, li2, side2, self.xRight - self.xLeft))
+            e = ICircuitEdge.createWithCond(self.lattice.cond(li1, side1, li2, side2, self.xRight - self.xLeft))
             graph.addEdge(n1, n2 if n2 != n1 else zeroNode, e)
             self.edges.add(e)
 
@@ -94,7 +94,7 @@ class Cell:
             if self.prev is not None:
                 self.prev.pullRightSection(destPoint)
     
-    def findNodeToConnect(self, pl: ISchemaPayload) -> ISchemaNode:
+    def getConnectingNode(self, pl: ISchemaPayload) -> ICircuitNode:
         for lst in self.leftSection, self.rightSection:
             for n in lst:
                 if n.x == pl.x and pl.trackNumber == n.lineIndex:

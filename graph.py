@@ -1,30 +1,30 @@
-from typing import Iterable, List, Set
+from typing import Iterable, Set
 from matplotlib import pyplot as plt
-from context import ISchemaEdge, ISchemaNode
+from context import ICircuitEdge, ICircuitNode
 
 
 class Graph:
     """ Имитирует граф схемы """
 
-    def __init__(self, nodes: Iterable[ISchemaNode]) -> None:
-        self.__nodes: Set[ISchemaNode] = set()
-        self.__edges: Set[ISchemaEdge] = set()
-        self.__nodesBeforeWiring: Set[ISchemaNode] = set()
+    def __init__(self, nodes: Iterable[ICircuitNode]) -> None:
+        self.__nodes: Set[ICircuitNode] = set()
+        self.__edges: Set[ICircuitEdge] = set()
+        self.__nodesBeforeWiring: Set[ICircuitNode] = set()
         for n in nodes:
             self.addNode(n)
             self.__nodesBeforeWiring.add(n)
 
-    def nodes(self) -> Set[ISchemaNode]:
+    def nodes(self) -> Set[ICircuitNode]:
         return self.__nodes
 
-    def addNode(self, node: ISchemaNode) -> None:
+    def addNode(self, node: ICircuitNode) -> None:
         """ Добавить узел """
         self.__nodes.add(node)
 
-    def addEdge(self, src: ISchemaNode, tgt: ISchemaNode, edge: ISchemaEdge) -> None:
+    def addEdge(self, src: ICircuitNode, tgt: ICircuitNode, edge: ICircuitEdge) -> None:
         """ Добавить ребро """
-        edge._ISchemaEdge__source = src  # type: ignore
-        edge._ISchemaEdge__target = tgt  # type: ignore
+        edge._ICircuitEdge__source = src  # type: ignore
+        edge._ICircuitEdge__target = tgt  # type: ignore
         self.__edges.add(edge)
 
     def plot(self, showZeroNode: bool = False, shift: float = 0.25) -> None:

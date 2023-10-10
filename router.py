@@ -3,7 +3,7 @@ from itertools import combinations
 from typing import Dict, List, Set
 
 import numpy as np
-from context import AcNetwork, ISchemaEdge, ISchemaNode
+from context import AcNetworkDto, ICircuitEdge, ICircuitNode
 from graph import Graph
 from partition import Partition
 from network import BranchNetworkChain, NetworkSection
@@ -12,10 +12,10 @@ from network import BranchNetworkChain, NetworkSection
 class Router:
     """ Трассировщик """
 
-    def __init__(self, graph: Graph, networks: Dict[int, List[AcNetwork]]) -> None:
+    def __init__(self, graph: Graph, networks: Dict[int, List[AcNetworkDto]]) -> None:
         self.__graph = graph
         self.__network: Dict[int, BranchNetworkChain] = {
-            li: BranchNetworkChain.fromAcNetwork(ntw) for li, ntw in networks.items()
+            li: BranchNetworkChain.fromAcNetworkDto(ntw) for li, ntw in networks.items()
         }
         self.partitions: Dict[int, List[Partition]] = {}
 
@@ -28,49 +28,49 @@ class Router:
                 branchIndex
             )
 
-    def initPartitionCells(self):
+    def initCells(self):
         for partitions in self.partitions.values():
             for p in partitions:
                 p.initCells()
 
-    def __buildBranchPartitions(self, branches: Dict[int, Dict[int, List[ISchemaNode]]], network: Dict[int, BranchNetworkChain], branchIndex: int) -> List[Partition]:
+    def __buildBranchPartitions(self, branches: Dict[int, Dict[int, List[ICircuitNode]]], network: Dict[int, BranchNetworkChain], branchIndex: int) -> List[Partition]:
         branchNodeQueues = branches[branchIndex]
         branchNetwork = network[branchIndex]
         partitions: List[Partition] = []
-        zeroNode = ISchemaNode(0, 0)
+        zeroNode = ICircuitNode(0, 0)
 
         leftBound = min((min(q) for q in branchNodeQueues.values())).x
         rightBound = max((max(q) for q in branchNodeQueues.values())).x
         if branchNetwork.last().xRight < rightBound:
             rightBound = branchNetwork.last().xRight
 
-        leftSection: Dict[int, ISchemaNode] = {}
+        leftSection: Dict[int, ICircuitNode] = {}
         for li in branchNetwork.findChainLink(leftBound).lines:
             q = branchNodeQueues.get(li)
             if q is None or len(q) == 0:
-                leftSection[li] = ISchemaNode.createInstance(
+                leftSection[li] = ICircuitNode.createInstance(
                     leftBound, branchIndex, li)
             else:
                 n = heapq.heappop(q)
                 if n.x > leftBound:
                     heapq.heappush(q, n)
-                    leftSection[li] = ISchemaNode.createInstance(
+                    leftSection[li] = ICircuitNode.createInstance(
                         leftBound, branchIndex, + li)
                 else:
                     leftSection[li] = n
 
         while (leftBound < rightBound):
             leftMost = rightBound
-            rightSection: Dict[int, ISchemaNode] = {}
+            rightSection: Dict[int, ICircuitNode] = {}
             cl = branchNetwork.findChainLink(leftBound)
             defaultX = min(cl.xRight, rightBound)
-            ls = NetworkSection()
-            rs = NetworkSection()
+            ls = NetworkSection([])
+            rs = NetworkSection([])
             for li in cl.lines:
                 q = branchNodeQueues.get(li)
-                node: ISchemaNode
+                node: ICircuitNode
                 if q is None or len(q) == 0:
-                    node = ISchemaNode.createInstance(
+                    node = ICircuitNode.createInstance(
                         defaultX, branchIndex, + li)
                 else:
                     n = heapq.heappop(q)
@@ -78,7 +78,7 @@ class Router:
                         n = heapq.heappop(q)
                     if n.x > defaultX:
                         heapq.heappush(q, n)
-                        node = ISchemaNode.createInstance(
+                        node = ICircuitNode.createInstance(
                             defaultX, branchIndex, li)
                     else:
                         node = n
@@ -93,13 +93,13 @@ class Router:
                         node.x = leftMost
                     else:
                         heapq.heappush(q, node)
-                        rightSection[li] = ISchemaNode.createInstance(
+                        rightSection[li] = ICircuitNode.createInstance(
                             leftMost, branchIndex, li)
                 rs.nodes.append(rightSection[li])
                 ls.nodes.append(
                     self.__copyIfBreaking(
                         leftSection.get(li) or
-                        ISchemaNode.createInstance(leftBound, branchIndex, li)
+                        ICircuitNode.createInstance(leftBound, branchIndex, li)
                     )
                 )
             partitions.append(Partition(leftBound, leftMost,
@@ -109,8 +109,8 @@ class Router:
 
         return partitions
 
-    def __arrangeNodesByBranchIndex(self, nodes: Set[ISchemaNode]) -> Dict[int, Dict[int, List[ISchemaNode]]]:
-        res: Dict[int, Dict[int, List[ISchemaNode]]] = {}
+    def __arrangeNodesByBranchIndex(self, nodes: Set[ICircuitNode]) -> Dict[int, Dict[int, List[ICircuitNode]]]:
+        res: Dict[int, Dict[int, List[ICircuitNode]]] = {}
         for node in nodes:
             branchIndex = node.branchIndex()
             branch = res.get(branchIndex)
@@ -127,9 +127,9 @@ class Router:
                 heapq.heappush(h, node)
         return res
 
-    def __copyIfBreaking(self, node: ISchemaNode) -> ISchemaNode:
+    def __copyIfBreaking(self, node: ICircuitNode) -> ICircuitNode:
         if node.breaking:
-            cp = ISchemaNode(node.lineIndex, node.axisCoordinate(), False)
+            cp = ICircuitNode(node.lineIndex, node.axisCoordinate(), False)
             cp.duplicatedBreakingNode = True
             return cp
         return node
@@ -137,13 +137,13 @@ class Router:
 
 if __name__ == "__main__":
     rng = np.random.default_rng()
-    nodes: Set[ISchemaNode] = set()
-    networks: Dict[int, List[AcNetwork]] = {}
+    nodes: Set[ICircuitNode] = set()
+    networks: Dict[int, List[AcNetworkDto]] = {}
     for branchIndex in range(3):
         for i in range(1, 4):
-            nodes.update([ISchemaNode(10_000 * branchIndex + i, x)
+            nodes.update([ICircuitNode(10_000 * branchIndex + i, x)
                          for x in rng.random(i + 1) * 100])
-        networks[branchIndex] = [AcNetwork(x, 2) for x in rng.random(2) * 150]
+        networks[branchIndex] = [AcNetworkDto(x, 2) for x in rng.random(2) * 150]
 
     graph = Graph(nodes)
     print(f"main schema network: {networks[0]}")
